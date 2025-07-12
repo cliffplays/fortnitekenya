@@ -1,0 +1,371 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CliffPlays Ent - Fortnite Shop</title>
+    <style>
+        body {
+            background: #181a20;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            text-align: center;
+            font-size: 2.2em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: 32px;
+            margin-bottom: 12px;
+            color: #4eaaff;
+            text-shadow: 0 2px 8px #000a;
+            position: sticky;
+            top: 0;
+            background: #181a20e6;
+            z-index: 10;
+            padding: 16px 0 8px 0;
+        }
+        .shop-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: center;
+            padding: 32px 0;
+        }
+        .shop-card {
+            background: #23272f;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            width: 220px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.5s;
+            opacity: 0;
+            animation: fadeIn 0.7s forwards;
+        }
+        .shop-card:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 12px 32px rgba(78,170,255,0.18), 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .shop-card img {
+            width: 160px;
+            height: 160px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #20232a;
+            box-shadow: 0 2px 8px #0004;
+        }
+        .shop-card .item-name {
+            font-weight: bold;
+            margin: 12px 0 6px 0;
+            font-size: 1.1em;
+        }
+        .shop-card .item-price {
+            color: #4eaaff;
+            font-size: 1.1em;
+            margin-bottom: 6px;
+        }
+        .shop-card .item-type {
+            font-size: 0.95em;
+            color: #aaa;
+        }
+        /* Buy button effect */
+        .shop-card a, .shop-card a:visited {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 20px;
+            background: #4eaaff;
+            color: #181a20;
+            font-weight: bold;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px #0002;
+        }
+        .shop-card a:hover {
+            background: #1e90ff;
+            color: #fff;
+            box-shadow: 0 4px 16px #4eaaff55;
+        }
+        /* Dropdown animation for summary arrow */
+        details summary {
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #4eaaff;
+            padding: 16px;
+            border-bottom: 1px solid #333;
+            outline: none;
+            list-style: none;
+            position: relative;
+        }
+        details summary::after {
+            content: "▼";
+            font-size: 0.8em;
+            margin-left: 10px;
+            transition: transform 0.3s;
+            display: inline-block;
+        }
+        details[open] summary::after {
+            transform: rotate(-180deg);
+        }
+        /* Fade-in animation for cards */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        /* --- Mobile Responsive Styles --- */
+        @media (max-width: 600px) {
+            .header {
+                font-size: 1.3em;
+                padding: 12px 0 6px 0;
+                margin-top: 12px;
+                margin-bottom: 6px;
+            }
+            .shop-container {
+                gap: 12px;
+                padding: 12px 0;
+            }
+            .shop-card {
+                width: 95vw;
+                max-width: 340px;
+                padding: 10px;
+            }
+            .shop-card img {
+                width: 90vw;
+                max-width: 140px;
+                height: 140px;
+            }
+            details[open] summary,
+            details summary {
+                font-size: 1em;
+                padding: 10px;
+            }
+            details {
+                width: 98vw !important;
+                min-width: unset !important;
+                max-width: 360px;
+            }
+        }
+        /* --- End Mobile Responsive Styles --- */
+    </style>
+    <script>
+        // FortniteAPI.io endpoint (requires API key)
+        const API_URL = 'https://fortniteapi.io/v2/shop?lang=en';
+        const API_KEY = 'b2b7fd85-215e81cf-34d9c75e-cc929fb1'; // <-- Your API key
+
+        // 1 V-Buck = 0.75 KES (Kenyan Shilling)
+        const VB_TO_KSH = 0.75;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Add header
+            const header = document.createElement('div');
+            header.className = 'header';
+            header.textContent = 'CliffPlays Ent';
+            document.body.appendChild(header);
+
+            const container = document.createElement('div');
+            container.className = 'shop-container';
+            document.body.appendChild(container);
+
+            try {
+                const res = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': API_KEY
+                    }
+                });
+                if (!res.ok) {
+                    console.error('HTTP error:', res.status, res.statusText);
+                    throw new Error('Network response was not ok');
+                }
+                const data = await res.json();
+                if (!data.shop) {
+                    console.error('Unexpected API data structure:', data);
+                    throw new Error('Unexpected API data structure');
+                }
+
+                // Separate music and non-music items
+                const musicItems = [];
+                const otherItems = [];
+
+                data.shop.forEach(item => {
+                    if ((item.displayType || '').toLowerCase() === 'music') {
+                        musicItems.push(item);
+                    } else {
+                        otherItems.push(item);
+                    }
+                });
+
+                // Render non-music items first
+                otherItems.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'shop-card';
+
+                    // Try multiple image sources for best compatibility
+                    let imgUrl = item.image 
+                        || (item.displayAssets && item.displayAssets[0] && item.displayAssets[0].url)
+                        || '';
+                    if (!imgUrl) {
+                        console.warn('No image found for item:', item);
+                        imgUrl = 'https://via.placeholder.com/160x160?text=No+Image';
+                    }
+
+                    const img = document.createElement('img');
+                    img.src = imgUrl;
+                    img.alt = item.displayName;
+                    card.appendChild(img);
+
+                    const name = document.createElement('div');
+                    name.className = 'item-name';
+                    name.textContent = item.displayName;
+                    card.appendChild(name);
+
+                    // Fix: Use item.price.regularPrice if price is an object
+                    let vbPrice = typeof item.price === 'number'
+                        ? item.price
+                        : (item.price && typeof item.price.regularPrice === 'number'
+                            ? item.price.regularPrice
+                            : 0);
+
+                    const kesPrice = (vbPrice * VB_TO_KSH).toFixed(0);
+
+                    const price = document.createElement('div');
+                    price.className = 'item-price';
+                    price.textContent = `${kesPrice} KES`;
+                    card.appendChild(price);
+
+                    const type = document.createElement('div');
+                    type.className = 'item-type';
+                    type.textContent = item.displayType;
+                    card.appendChild(type);
+
+                    // Add Buy button
+                    const buyBtn = document.createElement('a');
+                    buyBtn.textContent = 'Buy';
+                    buyBtn.style.display = 'inline-block';
+                    buyBtn.style.marginTop = '10px';
+                    buyBtn.style.padding = '8px 20px';
+                    buyBtn.style.background = '#4eaaff';
+                    buyBtn.style.color = '#181a20';
+                    buyBtn.style.fontWeight = 'bold';
+                    buyBtn.style.borderRadius = '6px';
+                    buyBtn.style.textDecoration = 'none';
+                    buyBtn.style.transition = 'background 0.2s';
+                    buyBtn.target = '_blank';
+
+                    // WhatsApp message
+                    const waMsg = encodeURIComponent(`I want to buy ${item.displayName} for ${kesPrice} KES`);
+                    buyBtn.href = `https://wa.me/254114873377?text=${waMsg}`;
+
+                    card.appendChild(buyBtn);
+
+                    container.appendChild(card);
+                });
+
+                // Render music items in a dropdown
+                if (musicItems.length > 0) {
+                    const dropdownWrapper = document.createElement('div');
+                    dropdownWrapper.style.width = '100%';
+                    dropdownWrapper.style.display = 'flex';
+                    dropdownWrapper.style.justifyContent = 'center';
+                    dropdownWrapper.style.marginTop = '32px';
+
+                    const dropdown = document.createElement('details');
+                    dropdown.style.width = '340px';
+                    dropdown.style.background = '#23272f';
+                    dropdown.style.borderRadius = '10px';
+                    dropdown.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                    dropdown.style.padding = '0 0 16px 0';
+
+                    const summary = document.createElement('summary');
+                    summary.textContent = 'Music';
+                    summary.style.cursor = 'pointer';
+                    summary.style.fontSize = '1.2em';
+                    summary.style.fontWeight = 'bold';
+                    summary.style.color = '#4eaaff';
+                    summary.style.padding = '16px';
+                    summary.style.borderBottom = '1px solid #333';
+
+                    dropdown.appendChild(summary);
+
+                    musicItems.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'shop-card';
+                        card.style.background = 'transparent';
+                        card.style.boxShadow = 'none';
+                        card.style.width = 'auto';
+                        card.style.margin = '16px 0 0 0';
+                        card.style.padding = '12px 0 0 0';
+
+                        // Try multiple image sources for best compatibility
+                        let imgUrl = item.image 
+                            || (item.displayAssets && item.displayAssets[0] && item.displayAssets[0].url)
+                            || '';
+                        if (!imgUrl) {
+                            imgUrl = 'https://via.placeholder.com/160x160?text=No+Image';
+                        }
+
+                        const img = document.createElement('img');
+                        img.src = imgUrl;
+                        img.alt = item.displayName;
+                        card.appendChild(img);
+
+                        const name = document.createElement('div');
+                        name.className = 'item-name';
+                        name.textContent = item.displayName;
+                        card.appendChild(name);
+
+                        // Fix: Use item.price.regularPrice if price is an object
+                        let vbPrice = typeof item.price === 'number'
+                            ? item.price
+                            : (item.price && typeof item.price.regularPrice === 'number'
+                                ? item.price.regularPrice
+                                : 0);
+
+                        const kesPrice = (vbPrice * VB_TO_KSH).toFixed(0);
+
+                        const price = document.createElement('div');
+                        price.className = 'item-price';
+                        price.textContent = `${kesPrice} KES`;
+                        card.appendChild(price);
+
+                        const type = document.createElement('div');
+                        type.className = 'item-type';
+                        type.textContent = item.displayType;
+                        card.appendChild(type);
+
+                        const buyBtn = document.createElement('a');
+                        buyBtn.textContent = 'Buy';
+                        buyBtn.style.display = 'inline-block';
+                        buyBtn.style.marginTop = '10px';
+                        buyBtn.style.padding = '8px 20px';
+                        buyBtn.style.background = '#4eaaff';
+                        buyBtn.style.color = '#181a20';
+                        buyBtn.style.fontWeight = 'bold';
+                        buyBtn.style.borderRadius = '6px';
+                        buyBtn.style.textDecoration = 'none';
+                        buyBtn.style.transition = 'background 0.2s';
+                        buyBtn.target = '_blank';
+
+                        // WhatsApp message
+                        const waMsg = encodeURIComponent(`I want to buy ${item.displayName} for ${kesPrice} KES`);
+                        buyBtn.href = `https://wa.me/254114873377?text=${waMsg}`;
+
+                        card.appendChild(buyBtn);
+
+                        dropdown.appendChild(card);
+                    });
+
+                    dropdownWrapper.appendChild(dropdown);
+                    container.appendChild(dropdownWrapper);
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>
